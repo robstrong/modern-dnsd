@@ -84,12 +84,6 @@ function final_response(res, value) {
 
   function well_formed_record(record) {
     record.class = record.class || 'IN'
-
-    var zone_minimum = DEFS.ttl
-    if(soa_record)
-      zone_minimum = soa_record.data.ttl
-
-    record.ttl = Math.max(record.ttl || 0, zone_minimum)
   }
 }
 
