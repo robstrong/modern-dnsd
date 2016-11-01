@@ -20,6 +20,22 @@ function createServer(handler) {
   return new Server(handler)
 }
 
+function bindUDP (self, type) {
+  if (self.udp) {
+    self.udp.close();
+    delete self.udp;
+  }
+
+  self.udp = dgram.createSocket(type || 'udp4')
+  self.udp.on('close', function() { self.close() })
+  self.udp.on('error', function(er) { self.emit('error', er) })
+  self.udp.on('message', function(msg, rinfo) { self.on_udp(msg, rinfo) })
+  self.udp.once('listening', function() {
+    self.listening.udp = true
+    if(self.listening.tcp)
+      self.emit('listening')
+  })
+}
 
 util.inherits(Server, events.EventEmitter)
 function Server (handler) {
@@ -32,29 +48,22 @@ function Server (handler) {
   if(handler)
     self.on('request', handler)
 
-  self.udp = dgram.createSocket('udp4')
   self.tcp = net.createServer()
 
-  self.udp.on('close', function() { self.close() })
   self.tcp.on('close', function() { self.close() })
 
-  self.udp.on('error', function(er) { self.emit('error', er) })
   self.tcp.on('error', function(er) { self.emit('error', er) })
 
   self.tcp.on('connection', function(connection) { self.on_tcp_connection(connection) })
-  self.udp.on('message', function(msg, rinfo) { self.on_udp(msg, rinfo) })
 
-  var listening = {'tcp':false, 'udp':false}
-  self.udp.once('listening', function() {
-    listening.udp = true
-    if(listening.tcp)
-      self.emit('listening')
-  })
+  var listening = self.listening = {'tcp':false, 'udp':false}
   self.tcp.once('listening', function() {
     listening.tcp = true
     if(listening.udp)
       self.emit('listening')
   })
+
+  bindUDP(self);
 }
 
 Server.prototype.zone = function(zone, server, admin, serial, refresh, retry, expire, ttl) {
@@ -92,6 +101,9 @@ Server.prototype.listen = function(port, ip, callback) {
 
   if(typeof callback === 'function')
     self.on('listening', callback)
+
+  if (/:/.test(self.ip))
+    bindUDP(self, 'udp6');
 
   self.udp.bind(port, ip)
   self.tcp.listen(port, ip)
@@ -213,16 +225,18 @@ function Response (data, connection) {
 
 Response.prototype.toJSON = Request.prototype.toJSON
 
+var udp4Or6 = function (t) { return ['udp4', 'udp6'].indexOf(t) !== -1 };
+
 Response.prototype.end = function(value) {
   var self = this
 
   var msg = convenient.final_response(self, value)
     , data = msg.toBinary()
 
-  if(self.connection.type == 'udp4' && data.length > 512)
+  if(udp4Or6(self.connection.type)&& data.length > 512)
     return self.emit('error', 'UDP responses greater than 512 bytes not yet implemented')
 
-  else if(self.connection.type == 'udp4')
+  else if(udp4Or6(self.connection.type))
     self.connection.send(data, 0, data.length, self.connection.remotePort, self.connection.remoteAddress, function(er) {
       if(er)
         self.emit('error', er)
