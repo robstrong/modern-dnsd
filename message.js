@@ -263,6 +263,9 @@ DNSRecord.prototype.parse = function(body, section_name, record_num, sections) {
                   , 'digest'     : rdata.slice(4).toJSON() // Convert to a list of numbers.
                   }
       break
+    case 'IN SSHFP':
+      self.data = parse.sshfp(body, rdata)
+      break
     case 'NONE A':
       self.data = []
       break

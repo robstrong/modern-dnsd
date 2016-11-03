@@ -176,6 +176,12 @@ State.prototype.record = function(section_name, record) {
                 , new Buffer(record.data.digest)
                 ]
         break
+      case 'IN SSHFP':
+        rdata = [ new Buffer([record.algorithm])
+                , new Buffer([record.fp_type])
+                , new Buffer(record.fingerprint)
+                ]
+        break
       case 'NONE A':
         // I think this is no data, from RFC 2136 S. 2.4.3.
         rdata = []

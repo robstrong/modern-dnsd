@@ -28,6 +28,7 @@ module.exports = { 'id': id
                  , 'srv': srv
                  , 'soa': soa
                  , 'txt': txt
+                 , 'sshfp': sshfp
                  }
 
 
@@ -245,6 +246,13 @@ function txt(msg, data) {
   }
 
   return parts
+}
+
+function sshfp(msg, data) {
+  return { 'algorithm': data.readUInt8(0)
+         , 'fp_type'  : data.readUInt8(1)
+         , 'fingerprint'  : data.slice(2)
+         }
 }
 
 function uncompress(msg, offset) {
