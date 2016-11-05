@@ -21,11 +21,6 @@ function createServer(handler) {
 }
 
 function bindUDP (self, type) {
-  if (self.udp) {
-    self.udp.close();
-    delete self.udp;
-  }
-
   self.udp = dgram.createSocket(type || 'udp4')
   self.udp.on('close', function() { self.close() })
   self.udp.on('error', function(er) { self.emit('error', er) })
@@ -37,6 +32,18 @@ function bindUDP (self, type) {
   })
 }
 
+function bindTCP (self) {
+  self.tcp = net.createServer()
+  self.tcp.on('close', function() { self.close() })
+  self.tcp.on('error', function(er) { self.emit('error', er) })
+  self.tcp.on('connection', function(connection) { self.on_tcp_connection(connection) })
+  self.tcp.once('listening', function() {
+    self.listening.tcp = true
+    if(self.listening.udp)
+      self.emit('listening')
+  })
+}
+
 util.inherits(Server, events.EventEmitter)
 function Server (handler) {
   var self = this
@@ -44,26 +51,9 @@ function Server (handler) {
 
   self.log = console
   self.zones = {}
+  self.listening = {'tcp':false, 'udp':false}
 
-  if(handler)
-    self.on('request', handler)
-
-  self.tcp = net.createServer()
-
-  self.tcp.on('close', function() { self.close() })
-
-  self.tcp.on('error', function(er) { self.emit('error', er) })
-
-  self.tcp.on('connection', function(connection) { self.on_tcp_connection(connection) })
-
-  var listening = self.listening = {'tcp':false, 'udp':false}
-  self.tcp.once('listening', function() {
-    listening.tcp = true
-    if(listening.udp)
-      self.emit('listening')
-  })
-
-  bindUDP(self);
+  if(handler) self.on('request', handler)
 }
 
 Server.prototype.zone = function(zone, server, admin, serial, refresh, retry, expire, ttl) {
@@ -102,10 +92,10 @@ Server.prototype.listen = function(port, ip, callback) {
   if(typeof callback === 'function')
     self.on('listening', callback)
 
-  if (/:/.test(self.ip))
-    bindUDP(self, 'udp6');
-
+  bindUDP(self, net.isIPv6(self.ip)?'udp6':'udp4');
   self.udp.bind(port, ip)
+
+  bindTCP(self);
   self.tcp.listen(port, ip)
 
   return self
