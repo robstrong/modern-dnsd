@@ -7,11 +7,11 @@
     "dnsd",
     "iris"
   ],
-  "version": "0.9.9",
+  "version": "0.10.0",
   "author": "ansuz <ansuz@transitiontech.ca",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ansuz/modern-dnsd"
+    "url": "https://github.com/robstrong/modern-dnsd"
   },
   "licenses": "AGPL-3.0",
   "engines": {
