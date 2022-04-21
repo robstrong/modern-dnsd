@@ -170,6 +170,7 @@ function mk_type_labels() {
     , 57: 'RKEY'
     , 58: 'TALINK'
     , 59: 'CDS'
+    , 65: 'HTTPS'
     // 60 - 98 unassigned
     , 99: 'SPF'
     , 100: 'UINFO'
